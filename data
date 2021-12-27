@@ -1,0 +1,115 @@
+;Graphics
+textcode equ 03h ;VGA code for text mode
+textlocation equ 0b800h ;Location of screen in text mode
+
+videocode equ 13h ;VGA code for video mode
+videolocation equ 0a000h ;Location of screen in video mode
+
+rowlength equ 320 ;Number of pixels in row (video)
+columnlength equ 200 ;Number of pixels in column (video)
+
+midrow equ rowlength/2 ;Number of pixels in half-row (video)
+middle equ midrow+midrow*columnlength ;Location of middle of screen
+;
+;Colors
+;Constants representing color by the 256 color table
+black equ 0h
+blue equ 1h
+red equ 4h
+bordo equ 0b8h
+orange equ 2ah
+brown equ 6h
+white equ 0fh
+grey equ 1ah
+;
+;Movements
+up equ -rowlength ;Moving one pixel up
+down equ rowlength ;Moving one pixel down
+right equ 1 ;Moving one pixel right
+left equ -1 ;Moving one pixel left
+;
+;Menu
+highscore dw ?
+playername db 5 dup(?),'$' ;if beat highscore
+
+;Constant strings for presenting the user
+;0ah - ASCII newline code
+menuloading db 'Loading Chicken Invaders$'
+menuwelcome db 'Welcome to Chicken Invaders$'
+menuversion db 'Version 1.2 of May 15th, 2020$'
+menuauthor db 'Created by Noam Zaks$'
+menuplay db 'Start Playing$'
+menureplay db 'Re-Play$'
+menuquit db 'Exit Game$'
+menuscore db ' Score: $'
+menuspace db ' $'
+menusettings db 'Options$'
+
+menuupkey db 'Enter Preffered Up Key',0ah,'                         Default is W',0ah,'                         Current is $'
+menuleftkey db 'Enter Preffered Left Key',0ah,'                         Default is A',0ah,'                         Current is $'
+menudownkey db 'Enter Preffered Down Key',0ah,'                         Default is S',0ah,'                         Current is $'
+menurightkey db 'Enter Preffered Right Key',0ah,'                         Default is D',0ah,'                         Current is $'
+menuexitkey db 'Enter Preffered Exit Key',0ah,'                         Default is ESC$'
+menushootkey db 'Enter Preffered Shoot Key',0ah,'                         Default is SPACE$'
+
+;weird bug first E is not showing up
+menushipcolor db 'EEnter Preffered Ship Color',0ah,'                         Default is RED',0ah,'                         1 - Green',0ah,'                         2 - Cyan',0ah,'                         3 - Red',0ah,'                         4 - Pink',0ah,'                         5 - Beige',0ah,'                         6 - Light Grey',0ah,'                         7 - Dark Grey',0ah,'                         8 - Light Blue',0ah,'                         9 - Light Green',0ah,'                         0 - Blue',0ah,'                         Current is $'
+menudifficulty db 'Game Difficulty: ',0ah,'                         Default is MEDIUM',0ah,'                         0 - EASY',0ah,'                         1 - MEDIUM',0ah,'                         2 - HARD',0ah,'                         3 - EXTREME',0ah,'                         9 - SANDBOX',0ah,'                         Current is $'
+
+;
+;Input Keys
+;The user's preffered keys to controlling the game
+upkey db 'w'
+leftkey db 'a'
+downkey db 's'
+rightkey db 'd'
+shootkey db 20h
+exitkey db 1bh
+;
+;Sounds
+;frequency constants of game sounds
+dartsound equ 5658h
+eggsound equ 0500h
+deathsound equ 1658h
+soundtimer db 0
+;
+;Game
+difficulty db 1 ;0 - Easy, 1 - Medium, 2 - Hard, 3 - Extreme, 9 - Sandbox
+score dw 0
+scorestring db 6 dup(0),'$' ;Score as a string to print
+life db 5
+;
+;Ship
+shiplocation dw middle
+previousship dw 0
+shipcolor db red
+shipcornertotop equ -6*rowlength+12 ;Difference in locations between its corner (shiplocation) to its top point
+;
+;Darts
+dartlocations dw 50 dup(0)
+dartcount equ 50
+;
+;Chickens
+chickenlocations dw 20 dup(0)
+chickendeltas dw 20 dup(0) ;Difference in location between the default starting position of the chicken path and the start position of the selected chicken, this is so that the chickens aren't all in the same position
+previousdelta dw 3 ;for better random
+previousrandom db 0 ;for better random
+chickencount equ 20
+chickenpath dw middle/2+rowlength/4+10*left,middle/2+rowlength/4+9*left+up,middle/2+rowlength/4+8*left+2*up,middle/2+rowlength/4+7*left+3*up,middle/2+rowlength/4+6*left+4*up,middle/2+rowlength/4+5*up+5*left,middle/2+rowlength/4+4*up+4*left,middle/2+rowlength/4+3*up+3*left,middle/2+rowlength/4+3*up+3*left,middle/2+rowlength/4+2*up+2*left,middle/2+rowlength/4+up+left,middle/2+rowlength/4,middle/2+rowlength/4,middle/2+rowlength/4,middle/2+rowlength/4,middle/2+rowlength/4,middle/2+rowlength/4,middle/2+rowlength/4
+chickenpathcount equ 18
+chickenpathcounters dw 20 dup(0)
+chickenspeed db 0 ;0 through 7
+chickenspawned db 0 ;Has a chicken already spawned this second?
+chickentoptobottom equ 18*rowlength ;Difference in location between the top (chickenlocation) to the bottom
+;
+;Eggs
+egglocations dw 50 dup(0)
+eggcount equ 50
+eggspeed db 0 ;0 through 45
+eggspawned db 0 ;Has an egg already spawned this second?
+;
+;Finish
+finishl1 db 'Chicken Invaders Finished Successfully.$'
+finishl2 db 'Thank you for playing!$'
+finishl3 db 'Created by Noam Zaks in 2020.$'
+;

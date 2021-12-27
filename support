@@ -1,0 +1,274 @@
+;Graphics
+    ;Changes the VGA setting to video
+    proc videomode
+        push ax
+
+        mov ax,videocode
+        int 10h
+        mov ax,videolocation
+        mov es,ax
+
+        pop ax
+        ret
+    endp videomode
+
+    ;Changes the VGA setting to text
+    proc textmode
+        push ax
+
+        mov ax,textcode
+        int 10h
+        mov ax,textlocation
+        mov es,ax
+
+        pop ax
+        ret
+    endp textmode
+
+    ;Clears the screen in text mode
+    proc clear
+        push ax
+        push cx
+        push si
+
+        mov cx,rowlength*columnlength
+        mov si,0
+        mov al,black
+        videoclearloop:
+            mov es:[si],ax
+            inc si
+            loop videoclearloop
+
+        pop si
+        pop cx
+        pop ax
+        ret
+    endp clear
+
+    ;Draws a line in video mode
+    proc line
+        push cx
+
+        mov ah,al
+        lineloop:
+            mov es:[si],ax
+            add si,bx
+            loop lineloop
+        sub si,bx ;One too much
+
+        pop cx
+        ret
+    endp line
+
+;Files
+    ;Gets the highscore from the file
+    proc gethighscore
+        ret
+    endp gethighscore
+
+    ;Writes the highscore to the file
+    proc sethighscore
+        ret
+    endp sethighscore
+;
+;Other
+    ;Inputs and interprets input from the user
+    proc input
+
+        mov bx,0
+        ;Any key pressed
+            mov ah,1h
+            int 16h
+            jz inputret
+        ;
+        ;Which key pressed
+            mov ah,0
+            int 16h
+
+            cmp al,upkey
+            je inputup
+            cmp al,leftkey
+            je inputleft
+            cmp al,downkey
+            je inputdown
+            cmp al,rightkey
+            je inputright
+            cmp al,exitkey
+            je inputquit
+            cmp al,shootkey
+            je inputshoot
+        ;
+        ;Ineffective key pressed
+        jmp inputret
+
+        inputup:
+            mov bx,up
+            mov ax,0
+            jmp inputret
+        ;
+        inputleft:
+            mov bx,left
+            mov ax,0
+            jmp inputret
+        ;
+        inputdown:
+            mov bx,down
+            mov ax,0
+            jmp inputret
+        ;
+        inputright:
+            mov bx,right
+            mov ax,0
+            jmp inputret
+        ;
+        inputret:
+            ret
+        ;
+        inputshoot:
+            mov ax,1
+            mov bx,0
+            jmp inputret
+        ;
+        inputquit:
+            call finish
+            jmp inputret
+    endp input
+
+    ;Initializes the mouse
+    proc initializemouse
+        push ax
+        push dx
+
+        ;Initialize Mouse
+        mov ax,0h
+        int 33h
+
+        ;Show Mouse
+        mov ax,1h
+        int 33h
+
+        pop dx
+        pop ax
+        ret
+    endp initializemouse
+
+    ;Moves the cursor
+    proc movecursor
+        push ax
+        push bx
+        push dx
+
+        mov ah,2
+        mov al,0
+        mov bx,0
+        int 10h
+
+        pop dx
+        pop bx
+        pop ax
+        ret
+    endp movecursor
+
+    ;Turns the score 0153 to a string "0153$"
+    proc makestring
+        push ax
+        push bx
+        push cx
+        push di
+
+        mov ax,score
+        mov di,3
+        mov cx,4
+        mov bl,10
+        scorestringloop:
+            div bl ;remainder at ah
+            add ah,30h
+            mov scorestring[di],ah
+            mov ah,0
+            dec di
+            loop scorestringloop
+        mov di,4
+        mov bl,'$'
+        mov scorestring[di],bl
+        scorestringret:
+            pop di
+            pop cx
+            pop bx
+            pop ax
+            ret
+    endp makestring
+
+    ;Prints a string
+    proc printstring
+        push ax
+
+        mov ah,9
+        int 21h
+
+        pop ax
+        ret
+    endp printstring
+
+    ;Waits before continuing to the next instruction
+    proc delay
+        push ax
+
+        mov ah,86h
+        int 15h
+
+        pop ax
+        ret
+    endp delay
+
+    ;Makes a sound
+    proc sound
+        push ax
+
+        in al,61h
+        or al,11b
+        out 61h,al
+
+        mov al,0b6h
+        out 43h,al
+
+        mov al,bl
+        out 42h,al
+        mov al,bh
+        out 42h,al
+
+        pop ax
+        ret
+    endp sound
+
+    ;Stops a sound playing
+    proc stopsound
+        push ax
+
+        in al,61h
+        and al,11111100b
+        out 61h,al
+
+        pop ax
+        ret
+    endp stopsound
+
+    ;Clears the input buffer
+    proc clearinput
+        push ax
+
+        clearinputloop:
+            ;Check if key available
+                mov ah,1
+                int 16h
+                jz clearinputret
+            ;
+            ;Empty key
+                mov ah,0
+                int 16h
+            ;
+            jmp clearinputloop
+
+        clearinputret:
+            pop ax
+            ret
+    endp clearinput

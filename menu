@@ -1,0 +1,405 @@
+;Main
+proc menu
+    push ax
+    push bx
+    push cx
+    push dx
+
+    call clearinput
+
+    cmp al,1 ;After screen
+    je menudontload
+    ;Loading Screen
+        call menuload
+
+        menudontload:
+        call clear
+        call textmode
+        call menutext
+
+        call initializemouse
+    ;
+    menuloop: ;Wait for user to choose option
+        mov ax,120
+        mov bx,105
+        call checkforclick
+        cmp cl,1
+        je menuret
+
+        mov ax,140
+        mov bx,125
+        call checkforclick
+        cmp cl,1
+        je mmenuquit
+
+        mov ax,160
+        mov bx,145
+        call checkforclick
+        cmp cl,1
+        jne dontcallsettings
+        call mmenusettings
+        dontcallsettings:
+        jmp menuloop
+    ;
+    menuret:
+        pop dx
+        pop cx
+        pop bx
+        pop ax
+        ret
+    ;
+    mmenuquit: ;Exit game
+        call finish
+        jmp menuret
+endp menu
+
+;A loading screen for the menu
+proc menuload
+    push ax
+    push cx
+    push dx
+    push si
+
+    call videomode
+    call clear
+
+    mov dx,0
+    mov cx,3
+    call delay
+
+    mov dx,0a08h
+    call movecursor
+    mov dx,offset menuloading
+    call printstring
+
+    mov dx,0
+    mov cx,3
+    call delay
+
+    mov al,blue
+    mov si,middle
+    call drawchicken
+
+    mov dx,0
+    mov cx,3
+    call delay
+
+    add si,80*down
+    sub si,shipcornertotop
+    mov al,orange
+    call drawship
+    add si,shipcornertotop
+    add si,10*up
+
+    mov dx,0
+    mov cx,3
+    call delay
+
+    mov cx,4
+    loadingdartloop:
+        push cx
+
+        add si,4*down
+        mov al,black
+        call drawdart
+        mov al,orange
+        add si,7*up
+        call drawdart
+        mov dx,0
+        mov cx,2
+        call delay
+
+        pop cx
+        loop loadingdartloop
+
+    pop si
+    pop dx
+    pop cx
+    pop ax
+    ret
+endp menuload
+
+;Checks for a mouse click in a specific row and column
+proc checkforclick
+    push dx
+    push ax
+    push bx
+
+
+    ;Get mouse
+        mov ax,3
+        int 33h
+
+    ;Check mouse clicks
+        and bx,11h
+        jz checkforclicknotclicked
+
+    ;Check location of click
+        pop bx
+        pop ax
+        push ax
+        push bx
+
+        cmp dx,ax
+        ja checkforclicknotclicked
+        cmp dx,bx
+        jb checkforclicknotclicked
+
+    ;Mouse is clicked
+    mov cl,1
+
+    checkforclickret:
+        pop bx
+        pop ax
+        pop dx
+        ret
+
+    checkforclicknotclicked:
+        mov cl,0
+        jmp checkforclickret
+endp checkforclick
+
+;Displays the menu's text
+proc menutext
+    push bx
+    push cx
+    push dx
+    push si
+
+    push ax
+    ;Draw frame
+        mov cx,17
+        mov si,1984
+        mov al,4
+        mov bx,2
+        call line
+        add si,2
+        mov cx,9
+        mov bx,160
+        call line
+
+        mov cx,19
+        mov bx,-2
+        call line
+
+        mov cx,9
+        mov bx,-160
+        call line
+    pop ax
+
+    cmp al,1
+    je menutextaftergame
+
+    ;Before Game
+        mov dx,061bh ;Row 6 Column 25
+        call movecursor
+        mov dx,offset menuwelcome
+        call printstring
+
+        mov dx,0819h ;Row 8 Column 25
+        call movecursor
+        mov dx,offset menuversion
+        call printstring
+
+        mov dx,0a1fh ;Row 10 Column 25
+        call movecursor
+        mov dx,offset menuauthor
+        call printstring
+
+        mov dx,0e22h ;Row 14 Column 25
+        call movecursor
+        mov dx,offset menuplay
+        call printstring
+
+        mov dx,1024h ;Row 16 Column 25
+        call movecursor
+        mov dx,offset menuquit
+        call printstring
+
+        mov dx,1225h ;Row 18 Column 25
+        call movecursor
+        mov dx,offset menusettings
+        call printstring
+
+        jmp menutextret
+    ;
+    menutextaftergame:
+        mov dx,0c22h ;Row 12 Column 25
+        call movecursor
+        mov dx,offset menuscore
+        call printstring
+        mov dx,offset scorestring
+        call printstring
+        mov dx,offset menuspace
+        call printstring
+
+        mov dx,0e25h ;Row 14 Column 25
+        call movecursor
+        mov dx,offset menureplay
+        call printstring
+
+        mov dx,1024h ;Row 16 Column 25
+        call movecursor
+        mov dx,offset menuquit
+        call printstring
+
+        mov dx,1225h ;Row 18 Column 25
+        call movecursor
+        mov dx,offset menusettings
+        call printstring
+    ;
+    menutextret:
+        ;Hide cursor
+            mov dx,0beefh ;Out of the screen ;D
+            call movecursor
+        ;
+        pop si
+        pop dx
+        pop cx
+        pop bx
+        ret
+endp menutext
+
+;Shows available options to the user
+proc mmenusettings
+    push ax
+    push bx
+    push cx
+    push dx
+
+    call videomode
+    call clear
+    call textmode
+
+    ;Ask for input keys
+        mov dx,offset menuupkey
+        mov bl,upkey
+        sub bl,20h ;Capitalize
+        call menuquestions
+        mov upkey,al
+
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menuleftkey
+        mov bl,leftkey
+        sub bl,20h ;Capitalize
+        call menuquestions
+        mov leftkey,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov bl,downkey
+        sub bl,20h ;Capitalize
+        mov dx,offset menudownkey
+        call menuquestions
+        mov downkey,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menurightkey
+        mov bl,rightkey
+        sub bl,20h ;Capitalize
+        call menuquestions
+        mov rightkey,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menushootkey
+        mov bl,shootkey
+        call menuquestions
+        mov shootkey,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menuexitkey
+        mov bl,exitkey
+        call menuquestions
+        mov exitkey,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menushipcolor
+        mov bl,shipcolor
+        add bl,30h
+        dec bl ;Started from 0
+        call menuquestions
+        sub al,30h ;'0'=30h
+        inc al ;Started from 0
+        mov shipcolor,al
+
+        mov dx,1
+        mov cx,0
+        call delay
+        call videomode
+        call clear
+        call textmode
+        mov dx,offset menudifficulty
+        mov bl,difficulty
+        add bl,30h
+        call menuquestions
+        sub al,30h ;'0'=30h
+        mov difficulty,al
+
+    mov dx,1
+    mov cx,0
+    call delay
+    call videomode
+    call clear
+    call textmode
+    mov al,1
+    mov score,0
+    call makestring
+    call menutext
+    call initializemouse
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp mmenusettings
+
+;Shows a question in the menusettings, and asks for 1 key input
+proc menuquestions
+
+    call clearinput
+
+    push dx
+    mov dx,0819h ;Row 8 Column 25
+    call movecursor
+    pop dx
+
+    call printstring
+    mov dl,bl ;Display bl character
+    mov ah,2
+    int 21h
+
+    mov dx,0beefh ;Out of the screen
+    call movecursor
+
+    mov ah,0
+    int 16h ;Get key
+
+    ret
+endp menuquestions
